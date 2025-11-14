@@ -17,20 +17,14 @@ CORS(app)  # Allow requests from Vercel frontend
 # Load the trained model
 print("🔄 Loading trained YOLO model...")
 
-# Use local model file
-MODEL_PATH = 'best.pt'
+# Use pretrained model to reduce image size
+MODEL_PATH = 'yolov8n.pt'
 
 try:
-    if os.path.exists(MODEL_PATH):
-        model = YOLO(MODEL_PATH)
-        print(f"✅ Model loaded: {MODEL_PATH}")
-    else:
-        print(f"⚠️  Model file not found: {MODEL_PATH}")
-        print("   Using pretrained YOLOv8n as fallback...")
-        model = YOLO('yolov8n.pt')
+    model = YOLO(MODEL_PATH)
+    print(f"✅ Model loaded: {MODEL_PATH}")
 except Exception as e:
     print(f"⚠️  Error loading model: {e}")
-    print("   Using pretrained YOLOv8n as fallback...")
     model = YOLO('yolov8n.pt')
 
 # Class names

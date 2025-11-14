@@ -79,7 +79,7 @@ print("="*50)
 model = None
 
 def load_model():
-    """Load model once and cache it"""
+    """Load model once and cache it - optimized for 512MB RAM"""
     global model
     if model is not None:
         return model
@@ -87,12 +87,26 @@ def load_model():
     try:
         if download_model() and os.path.exists(MODEL_PATH):
             print(f"Loading model from: {MODEL_PATH}")
-            # Load with minimal overhead
+            # Load with MINIMAL memory footprint
             import torch
+            import gc
+            
+            # Force garbage collection
+            gc.collect()
+            
+            # Load model with minimal overhead
             model = YOLO(MODEL_PATH, task='detect')
-            # Optimize for inference
+            
+            # Optimize for low memory
             if hasattr(model, 'model'):
-                model.model.eval()  # Set to eval mode
+                model.model.eval()
+                # Disable gradients to save memory
+                for param in model.model.parameters():
+                    param.requires_grad = False
+            
+            # Clean up
+            gc.collect()
+            
             print(f"✅ Custom model loaded: {MODEL_PATH}")
             print(f"Model size: {os.path.getsize(MODEL_PATH) / 1024 / 1024:.2f} MB")
         else:
@@ -175,24 +189,30 @@ def detect():
         if img is None:
             return jsonify({'error': 'Invalid image'}), 400
 
-        # Resize large images to reduce processing time
-        max_size = 1024
+        # Resize to small size for 512MB RAM limit
+        max_size = 640
         h, w = img.shape[:2]
         if max(h, w) > max_size:
             scale = max_size / max(h, w)
             new_w, new_h = int(w * scale), int(h * scale)
             img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-        # Run inference with optimized settings
+        # Run inference with LOW MEMORY settings
+        import gc
+        gc.collect()  # Clean memory before inference
+        
         results = model(
             img, 
-            conf=0.25, 
-            iou=0.45, 
+            conf=0.3,       # Higher confidence = less detections = less memory
+            iou=0.5, 
             verbose=False, 
             device='cpu',
-            half=False,  # Disable FP16
-            imgsz=640    # Fixed size for consistency
+            half=False,
+            imgsz=320,      # SMALL size for low RAM
+            max_det=50      # Limit detections
         )
+        
+        gc.collect()  # Clean memory after inference
         
         # Parse results and draw annotations
         detections = []

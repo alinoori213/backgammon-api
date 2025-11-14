@@ -17,14 +17,32 @@ CORS(app)  # Allow requests from Vercel frontend
 # Load the trained model
 print("🔄 Loading trained YOLO model...")
 
-# Use pretrained model to reduce image size
-MODEL_PATH = 'yolov8n.pt'
+# Download model from Google Drive if not exists
+MODEL_PATH = 'best.pt'
+MODEL_URL = 'https://drive.google.com/uc?export=download&id=1Ov3gwbRkD3Nd9cdfn1WLvDljPGfaAXrh'
 
+def download_model():
+    """Download model from Google Drive"""
+    if not os.path.exists(MODEL_PATH):
+        print(f"📥 Downloading model from Google Drive...")
+        try:
+            import urllib.request
+            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+            print(f"✅ Model downloaded: {MODEL_PATH}")
+        except Exception as e:
+            print(f"⚠️  Download failed: {e}")
+            return False
+    return True
+
+# Try to load custom trained model
 try:
-    model = YOLO(MODEL_PATH)
-    print(f"✅ Model loaded: {MODEL_PATH}")
+    if download_model() and os.path.exists(MODEL_PATH):
+        model = YOLO(MODEL_PATH)
+        print(f"✅ Custom model loaded: {MODEL_PATH}")
+    else:
+        raise FileNotFoundError("Model not available")
 except Exception as e:
-    print(f"⚠️  Error loading model: {e}")
+    print(f"⚠️  Using pretrained model as fallback: {e}")
     model = YOLO('yolov8n.pt')
 
 # Class names
